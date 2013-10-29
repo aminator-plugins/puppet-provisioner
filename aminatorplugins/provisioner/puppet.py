@@ -35,7 +35,7 @@ from aminator.plugins.provisioner.base import BaseProvisionerPlugin
 from aminator.plugins.provisioner.apt import AptProvisionerPlugin, dpkg_install, apt_get_update, apt_get_install
 from aminator.plugins.provisioner.yum import YumProvisionerPlugin, yum_localinstall, yum_install, yum_clean_metadata
 from aminator.util import download_file
-from aminator.util.linux import command, mkdirs
+from aminator.util.linux import command, mkdir_p
 from aminator.util.linux import Chroot
 from aminator.config import conf_action
 
@@ -102,8 +102,8 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
         certs_dir = self._config.context.puppet.get('puppet_certs_dir', os.path.join('/var','lib','puppet','ssl','certs'))
         private_keys_dir = self._config.    context.puppet.get('puppet_private_keys_dir',os.path.join('/var','lib','puppet','ssl','private_keys'))
 
-        self._makedirs(self._distro._mountpoint + certs_dir)
-        self._makedirs(self._distro._mountpoint + private_keys_dir)
+        mkdir_p(self._distro._mountpoint + certs_dir)
+        mkdir_p(self._distro._mountpoint + private_keys_dir)
 
         cert = os.path.join(certs_dir,pem_file_name + '.pem')
         key = os.path.join(private_keys_dir, pem_file_name + '.pem')
@@ -137,7 +137,7 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
 
             dest_dir = os.path.join(self._distro._mountpoint,'etc','puppet') if 'modules' in tar.getnames() else os.path.join(self._distro._mountpoint,'etc','puppet','modules')
 
-            self._makedirs(dest_dir)
+            mkdir_p(dest_dir)
             log.debug('Untarring to {0}'.format(dest_dir))
             tar.extractall(dest_dir)
             tar.close
@@ -147,7 +147,7 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
         else:
             self._puppet_apply_file = os.path.join('etc','puppet','modules', os.path.basename(manifests))
             dest_file = os.path.join(self._distro._mountpoint,'etc','puppet','modules', os.path.basename(manifests))
-            self._makedirs(os.path.join(self._distro._mountpoint,'etc','puppet','modules'))
+            mkdir_p(os.path.join(self._distro._mountpoint,'etc','puppet','modules'))
             log.debug('Trying to copy \'{0}\' to \'{1}\''.format(manifests, dest_file))
             shutil.copy2(manifests, dest_file)
 
