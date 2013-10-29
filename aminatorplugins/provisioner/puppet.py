@@ -82,85 +82,6 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
         self._config.plugins[self.full_name].__setattr__(name, default)
         return default
 
-    def _store_package_metadata(self):
-        ""
-
-    def _provision_package(self):
-        ""
-
-    def _pre_chroot_block(self):
-        log.debug('Starting _pre_chroot_block')
-        context = self._config.context
-        config = self._config
-
-        log.debug("Setting metadata release to {0}".format(time.strftime("%Y%m%d%H%M")))
-        context.package.attributes = {'name': '', 'version': 'puppet', 'release': time.strftime("%Y%m%d%H%M") }
-
-        if self._puppet_run_mode is 'master':
-            self._set_up_puppet_certs(context.package.arg)
-        elif self._puppet_run_mode is 'apply':
-            self._set_up_puppet_manifests(context.package.arg)
-
-    def _set_up_puppet_certs(self, pem_file_name):
-        certs_dir = self._get_config_value('puppet_certs_dir', os.path.join('/var','lib','puppet','ssl','certs'))
-        private_keys_dir = self._config.    self._get_config_value('puppet_private_keys_dir',os.path.join('/var','lib','puppet','ssl','private_keys'))
-
-        mkdir_p(self._distro._mountpoint + certs_dir)
-        mkdir_p(self._distro._mountpoint + private_keys_dir)
-
-        cert = os.path.join(certs_dir,pem_file_name + '.pem')
-        key = os.path.join(private_keys_dir, pem_file_name + '.pem')
-
-        if not os.access( cert, os.F_OK ):
-            generate_certificate(self._config.context.package.arg)
-
-        log.debug('Placing certs for {0} into mountpoint {1}'.format(pem_file_name, self._distro._mountpoint))
-        shutil.copy(os.path.join(certs_dir, 'ca.pem'),              self._distro._mountpoint + certs_dir)
-        shutil.copy(cert , self._distro._mountpoint + certs_dir)
-        shutil.copy(key, self._distro._mountpoint + private_keys_dir)
-
-
-    def _list_files(self, startpath):
-        log.debug("********************************************************")
-        start_len = len(startpath.split('/'))
-        for root, dir, files in os.walk(startpath):
-            path = root.split('/')
-            log.debug((len(path) - start_len) * '---' + ' {0}'.format(os.path.basename(root)))
-            for file in files:
-                log.debug((len(path) - start_len + 1) * '---' + '{0}'.format(file))
-        log.debug("********************************************************")
-
-    def _set_up_puppet_manifests(self, manifests):
-        import tarfile
-        import shutil
-
-        if tarfile.is_tarfile(manifests):
-            self._puppet_apply_file = ''
-            tar = tarfile.open(manifests,'r:gz')
-
-            dest_dir = os.path.join(self._distro._mountpoint,'etc','puppet') if 'modules' in tar.getnames() else os.path.join(self._distro._mountpoint,'etc','puppet','modules')
-
-            mkdir_p(dest_dir)
-            log.debug('Untarring to {0}'.format(dest_dir))
-            tar.extractall(dest_dir)
-            tar.close
-
-            self._list_files(self._distro._mountpoint + '/etc/puppet')
-
-        else:
-            self._puppet_apply_file = os.path.join('etc','puppet','modules', os.path.basename(manifests))
-            dest_file = os.path.join(self._distro._mountpoint,'etc','puppet','modules', os.path.basename(manifests))
-            mkdir_p(os.path.join(self._distro._mountpoint,'etc','puppet','modules'))
-            log.debug('Trying to copy \'{0}\' to \'{1}\''.format(manifests, dest_file))
-            shutil.copy2(manifests, dest_file)
-
-    def _rm_puppet_certs_dirs(self, certs_dir = '/var/lib/puppet/ssl'):
-        shutil.rmtree(certs_dir)
-
-    def _escaped_puppet_args(self):
-        import re
-        return re.sub('\s','\ ', self._get_config_value('puppet_args', '' ))
-
     def provision(self):
         """
         overrides the base provision
@@ -176,25 +97,13 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
         context = self._config.context
         config = self._config
 
-        if os.access( context.package.arg, os.F_OK ):
-            log.info("{0} appears to be a file.  Running Puppet in Masterless mode with that as our Puppet manifests.".format(context.package.arg))
-            self._puppet_run_mode = 'apply'
-        else:
-            log.info("{0} does not appear to be a file.  Using that as our Puppet certname.".format(context.package.arg))
-            self._puppet_run_mode = 'master'
-
+        self._decide_puppet_run_mode()
         self._pre_chroot_block()
 
         log.debug('Entering chroot at {0}'.format(self._distro._mountpoint))
         with Chroot(self._distro._mountpoint):
-            if self._distro._name is 'redhat':
-                log.info('Installing Puppet with yum.')
-                yum_clean_metadata
-                yum_install('puppet')
-            else:
-                log.info('Installing Puppet with apt.')
-                apt_get_update
-                apt_get_install('puppet')
+
+            self._install_puppet()
 
             escaped_args = self._escaped_puppet_args()
 
@@ -224,6 +133,103 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
         log.debug('Exited chroot')
 
         return True
+
+    def _store_package_metadata(self):
+        ""
+
+    def _provision_package(self):
+        ""
+
+    def _pre_chroot_block(self):
+        context = self._config.context
+
+        log.debug("Setting metadata release to {0}".format(time.strftime("%Y%m%d%H%M")))
+        context.package.attributes = {'name': '', 'version': 'puppet', 'release': time.strftime("%Y%m%d%H%M") }
+
+        if self._puppet_run_mode is 'master':
+            self._set_up_puppet_certs(context.package.arg)
+        elif self._puppet_run_mode is 'apply':
+            self._set_up_puppet_manifests(context.package.arg)
+
+    def _set_up_puppet_certs(self, pem_file_name):
+        certs_dir = self._get_config_value('puppet_certs_dir', os.path.join('/var','lib','puppet','ssl','certs'))
+        private_keys_dir = self._config.    self._get_config_value('puppet_private_keys_dir',os.path.join('/var','lib','puppet','ssl','private_keys'))
+
+        mkdir_p(self._distro._mountpoint + certs_dir)
+        mkdir_p(self._distro._mountpoint + private_keys_dir)
+
+        cert = os.path.join(certs_dir,pem_file_name + '.pem')
+        key = os.path.join(private_keys_dir, pem_file_name + '.pem')
+
+        if not os.access( cert, os.F_OK ):
+            generate_certificate(self._config.context.package.arg)
+
+        log.debug('Placing certs for {0} into mountpoint {1}'.format(pem_file_name, self._distro._mountpoint))
+        shutil.copy(os.path.join(certs_dir, 'ca.pem'),              self._distro._mountpoint + certs_dir)
+        shutil.copy(cert , self._distro._mountpoint + certs_dir)
+        shutil.copy(key, self._distro._mountpoint + private_keys_dir)
+
+
+    def _set_up_puppet_manifests(self, manifests):
+        import tarfile
+        import shutil
+
+        if tarfile.is_tarfile(manifests):
+            self._puppet_apply_file = ''
+            tar = tarfile.open(manifests,'r:gz')
+
+            dest_dir = os.path.join(self._distro._mountpoint,'etc','puppet') if 'modules' in tar.getnames() else os.path.join(self._distro._mountpoint,'etc','puppet','modules')
+
+            mkdir_p(dest_dir)
+            log.debug('Untarring to {0}'.format(dest_dir))
+            tar.extractall(dest_dir)
+            tar.close
+
+            self._list_files(self._distro._mountpoint + '/etc/puppet')
+
+        else:
+            self._puppet_apply_file = os.path.join('etc','puppet','modules', os.path.basename(manifests))
+            dest_file = os.path.join(self._distro._mountpoint,'etc','puppet','modules', os.path.basename(manifests))
+            mkdir_p(os.path.join(self._distro._mountpoint,'etc','puppet','modules'))
+            log.debug('Trying to copy \'{0}\' to \'{1}\''.format(manifests, dest_file))
+            shutil.copy2(manifests, dest_file)
+
+    def _rm_puppet_certs_dirs(self, certs_dir = '/var/lib/puppet/ssl'):
+        shutil.rmtree(certs_dir)
+
+    def _list_files(self, startpath):
+        log.debug("********************************************************")
+        start_len = len(startpath.split('/'))
+        for root, dir, files in os.walk(startpath):
+            path = root.split('/')
+            log.debug((len(path) - start_len) * '---' + ' {0}'.format(os.path.basename(root)))
+            for file in files:
+                log.debug((len(path) - start_len + 1) * '---' + '{0}'.format(file))
+        log.debug("********************************************************")
+
+    def _escaped_puppet_args(self):
+        import re
+        return re.sub('\s','\ ', self._get_config_value('puppet_args', '' ))
+
+    def _decide_puppet_run_mode(self):
+        if os.access( self._config.context.package.arg, os.F_OK ):
+            log.info("{0} appears to be a file.  Running Puppet in Masterless mode with that as our Puppet manifests.".format(self._config.context.package.arg))
+            self._puppet_run_mode = 'apply'
+        else:
+            log.info("{0} does not appear to be a file.  Using that as our Puppet certname.".format(self._config.context.package.arg))
+            self._puppet_run_mode = 'master'
+
+    def _install_puppet(self):
+        if self._distro._name is 'redhat':
+            log.info('Installing Puppet with yum.')
+            yum_clean_metadata
+            yum_install('puppet')
+        else:
+            log.info('Installing Puppet with apt.')
+            apt_get_update
+            apt_get_install('puppet')
+
+
 
 
 @command()
