@@ -88,16 +88,11 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
         context.package.attributes = {'name': '', 'version': 'puppet', 'release': time.strftime("%Y%m%d%H%M") }
 
         if self._puppet_run_mode is 'master':
-            self.set_up_puppet_certs(context.package.arg)
+            self._set_up_puppet_certs(context.package.arg)
         elif self._puppet_run_mode is 'apply':
-            self.set_up_puppet_manifests(context.package.arg)
-                                                                            
-    def _makedirs(self, dirs):
-        log.debug('creating directory {0} if it does not exist'.format(dirs))
-        if not os.path.exists(dirs):
-            os.makedirs(dirs)
+            self._set_up_puppet_manifests(context.package.arg)
 
-    def set_up_puppet_certs(self, pem_file_name):
+    def _set_up_puppet_certs(self, pem_file_name):
         certs_dir = self._config.context.puppet.get('puppet_certs_dir', os.path.join('/var','lib','puppet','ssl','certs'))
         private_keys_dir = self._config.    context.puppet.get('puppet_private_keys_dir',os.path.join('/var','lib','puppet','ssl','private_keys'))
 
@@ -116,7 +111,7 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
         shutil.copy(key, self._distro._mountpoint + private_keys_dir)
 
 
-    def list_files(self, startpath):
+    def _list_files(self, startpath):
         log.debug("********************************************************")
         start_len = len(startpath.split('/'))
         for root, dir, files in os.walk(startpath):
@@ -126,7 +121,7 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
                 log.debug((len(path) - start_len + 1) * '---' + '{0}'.format(file))
         log.debug("********************************************************")
 
-    def set_up_puppet_manifests(self, manifests):
+    def _set_up_puppet_manifests(self, manifests):
         import tarfile
         import shutil
 
@@ -141,7 +136,7 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
             tar.extractall(dest_dir)
             tar.close
 
-            self.list_files(self._distro._mountpoint + '/etc/puppet')
+            self._list_files(self._distro._mountpoint + '/etc/puppet')
 
         else:
             self._puppet_apply_file = os.path.join('etc','puppet','modules', os.path.basename(manifests))
@@ -150,7 +145,7 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
             log.debug('Trying to copy \'{0}\' to \'{1}\''.format(manifests, dest_file))
             shutil.copy2(manifests, dest_file)
 
-    def rm_puppet_certs_dirs(self, certs_dir = '/var/lib/puppet/ssl'):
+    def _rm_puppet_certs_dirs(self, certs_dir = '/var/lib/puppet/ssl'):
         shutil.rmtree(certs_dir)
 
     def _escaped_puppet_args(self):
@@ -197,7 +192,7 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
             if self._puppet_run_mode is 'master':
                 log.info('Running puppet agent')
                 result = puppet_agent( escaped_args, context.package.arg, context.puppet.get('puppet_master', socket.gethostname()) )
-                self.rm_puppet_certs_dirs()
+                self._rm_puppet_certs_dirs()
             elif self._puppet_run_mode is 'apply':
                 if self._puppet_apply_file is '':
                     log.info('Running puppet apply')
