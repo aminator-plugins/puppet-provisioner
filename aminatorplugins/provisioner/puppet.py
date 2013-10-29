@@ -73,17 +73,26 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
                                     action=conf_action(self._config.plugins[self.full_name]),
                                     help='Used when generating/copying certs for use with Puppet Master')
 
+    def _get_config_value(self, name, default):
+        config = self._config.plugins[self.full_name]
+
+        if config.get(name):
+            return config.get(name)
+
+        self._config.plugins[self.full_name].__setattr__(name, default)
+        return default
+
     def _store_package_metadata(self):
         ""
-        
+
     def _provision_package(self):
         ""
-        
+
     def _pre_chroot_block(self):
         log.debug('Starting _pre_chroot_block')
         context = self._config.context
         config = self._config
-        
+
         log.debug("Setting metadata release to {0}".format(time.strftime("%Y%m%d%H%M")))
         context.package.attributes = {'name': '', 'version': 'puppet', 'release': time.strftime("%Y%m%d%H%M") }
 
@@ -93,8 +102,8 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
             self._set_up_puppet_manifests(context.package.arg)
 
     def _set_up_puppet_certs(self, pem_file_name):
-        certs_dir = self._config.context.puppet.get('puppet_certs_dir', os.path.join('/var','lib','puppet','ssl','certs'))
-        private_keys_dir = self._config.    context.puppet.get('puppet_private_keys_dir',os.path.join('/var','lib','puppet','ssl','private_keys'))
+        certs_dir = self._get_config_value('puppet_certs_dir', os.path.join('/var','lib','puppet','ssl','certs'))
+        private_keys_dir = self._config.    self._get_config_value('puppet_private_keys_dir',os.path.join('/var','lib','puppet','ssl','private_keys'))
 
         mkdir_p(self._distro._mountpoint + certs_dir)
         mkdir_p(self._distro._mountpoint + private_keys_dir)
@@ -150,7 +159,7 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
 
     def _escaped_puppet_args(self):
         import re
-        return re.sub('\s','\ ', self._config.context.puppet.get('puppet_args', '' ))
+        return re.sub('\s','\ ', self._get_config_value('puppet_args', '' ))
 
     def provision(self):
         """
@@ -175,7 +184,7 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
             self._puppet_run_mode = 'master'
 
         self._pre_chroot_block()
-        
+
         log.debug('Entering chroot at {0}'.format(self._distro._mountpoint))
         with Chroot(self._distro._mountpoint):
             if self._distro._name is 'redhat':
@@ -191,7 +200,7 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
 
             if self._puppet_run_mode is 'master':
                 log.info('Running puppet agent')
-                result = puppet_agent( escaped_args, context.package.arg, context.puppet.get('puppet_master', socket.gethostname()) )
+                result = puppet_agent( escaped_args, context.package.arg, self._get_config_value('puppet_master', socket.gethostname()) )
                 self._rm_puppet_certs_dirs()
             elif self._puppet_run_mode is 'apply':
                 if self._puppet_apply_file is '':
