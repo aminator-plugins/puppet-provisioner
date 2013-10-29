@@ -5,9 +5,9 @@ setup(
     packages = find_packages(),
     namespace_packages = ( 'aminatorplugins', ),
 
-    data_files = [
-        ('/etc/aminator/plugins', ['default_conf/aminatorplugins.provisioner.puppet.yml']),
-    ],
+    # data_files = [
+    #     ('/etc/aminator/plugins', ['default_conf/aminatorplugins.provisioner.puppet.yml']),
+    # ],
 
     entry_points = {
        'aminator.plugins.provisioner': [
