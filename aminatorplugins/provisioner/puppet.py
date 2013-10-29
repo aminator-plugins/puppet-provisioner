@@ -128,17 +128,10 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
                 log.critical('Puppet run failed: {0.std_err}'.format(result.result))
                 return False
 
-            return False
         log.info('=========================================================================================================')
         log.debug('Exited chroot')
 
         return True
-
-    def _store_package_metadata(self):
-        ""
-
-    def _provision_package(self):
-        ""
 
     def _pre_chroot_block(self):
         context = self._config.context
@@ -150,6 +143,12 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
             self._set_up_puppet_certs(context.package.arg)
         elif self._puppet_run_mode is 'apply':
             self._set_up_puppet_manifests(context.package.arg)
+
+    def _store_package_metadata(self):
+        ""
+
+    def _provision_package(self):
+        ""
 
     def _set_up_puppet_certs(self, pem_file_name):
         certs_dir = self._get_config_value('puppet_certs_dir', os.path.join('/var','lib','puppet','ssl','certs'))
@@ -168,7 +167,6 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
         shutil.copy(os.path.join(certs_dir, 'ca.pem'),              self._distro._mountpoint + certs_dir)
         shutil.copy(cert , self._distro._mountpoint + certs_dir)
         shutil.copy(key, self._distro._mountpoint + private_keys_dir)
-
 
     def _set_up_puppet_manifests(self, manifests):
         import tarfile
@@ -228,8 +226,6 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
             log.info('Installing Puppet with apt.')
             apt_get_update
             apt_get_install('puppet')
-
-
 
 
 @command()
