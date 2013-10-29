@@ -54,24 +54,23 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
     _name = 'puppet'
 
     def add_plugin_args(self):
-        context = self._config.context
         puppet_config = self._parser.add_argument_group(title='Puppet Options',
                                                       description='Options for the puppet provisioner')
 
         puppet_config.add_argument('--puppet_args', dest='puppet_args',
-                                    action=conf_action(config=context.puppet),
+                                    action=conf_action(self._config.plugins[self.full_name]),
                                     help='Extra arguments for Puppet.  Can be used to include a Puppet class with -e.')
 
         puppet_config.add_argument('--puppet_master', dest='puppet_master',
-                                    action=conf_action(config=context.puppet),
+                                    action=conf_action(self._config.plugins[self.full_name]),
                                     help='Hostname of Puppet Master')
 
         puppet_config.add_argument('--puppet_certs_dir', dest='puppet_certs_dir',
-                                    action=conf_action(config=context.puppet),
+                                    action=conf_action(self._config.plugins[self.full_name]),
                                     help='Used when generating/copying certs for use with Puppet Master')
 
         puppet_config.add_argument('--puppet_private_keys_dir', dest='puppet_private_keys_dir',
-                                    action=conf_action(config=context.puppet),
+                                    action=conf_action(self._config.plugins[self.full_name]),
                                     help='Used when generating/copying certs for use with Puppet Master')
 
     def _store_package_metadata(self):
