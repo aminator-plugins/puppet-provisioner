@@ -1,6 +1,18 @@
 # Puppet Provisioner for Aminator
 
-## Usage
+## Accepted arguments
+
+```
+--puppet_args - Extra arguments for Puppet.  Can be used to include a Puppet class with -e.
+
+--puppet_master - Hostname of Puppet Master
+
+--puppet_certs_dir - Used when generating/copying certs for use with Puppet Master
+
+--puppet_private_keys_dir - Used when generating/copying certs for use with Puppet Master
+```
+
+## Usage with a Master
 
 ### Basic
 
@@ -10,6 +22,17 @@ aminate -B ami-35792c5c some-host.domain.com
 
 Puppet will use the default hostname 'puppet' to try to talk to the Puppet Master server and generate certs with the name in the last argument.
 
+
+### Master specified
+
+```
+aminate -B ami-35792c5c --puppet_master=puppet-master.domain.com some-host.domain.com
+```
+
+Puppet will use the specified hostname to try to talk to the Puppet Master server and generate certs with the name in the last argument.
+
+
+## Usage Masterless
 
 
 ### Masterless with one manifest
