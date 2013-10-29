@@ -68,11 +68,11 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
 
         puppet_config.add_argument('--puppet_certs_dir', dest='puppet_certs_dir',
                                     action=conf_action(config=context.puppet),
-                                    help='puppet_certs_dir')
+                                    help='Used when generating/copying certs for use with Puppet Master')
 
         puppet_config.add_argument('--puppet_private_keys_dir', dest='puppet_private_keys_dir',
                                     action=conf_action(config=context.puppet),
-                                    help='puppet_private_keys_dir')
+                                    help='Used when generating/copying certs for use with Puppet Master')
 
     def _store_package_metadata(self):
         ""
