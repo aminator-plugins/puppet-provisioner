@@ -18,3 +18,6 @@ chroot_mounts:
 provision_configs: true
 provision_config_files:
   - /etc/resolv.conf
+
+puppet_certs_dir: /var/lib/puppet/ssl/certs
+puppet_private_keys_dir: /var/lib/puppet/ssl/private_keys

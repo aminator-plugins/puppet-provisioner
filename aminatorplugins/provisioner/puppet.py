@@ -57,19 +57,19 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
         puppet_config = self._parser.add_argument_group(title='Puppet Options',
                                                       description='Options for the puppet provisioner')
 
-        puppet_config.add_argument('--puppet_args', dest='puppet_args',
+        puppet_config.add_argument('--puppet-args', dest='puppet_args',
                                     action=conf_action(self._config.plugins[self.full_name]),
                                     help='Extra arguments for Puppet.  Can be used to include a Puppet class with -e.')
 
-        puppet_config.add_argument('--puppet_master', dest='puppet_master',
+        puppet_config.add_argument('--puppet-master', dest='puppet_master',
                                     action=conf_action(self._config.plugins[self.full_name]),
                                     help='Hostname of Puppet Master')
 
-        puppet_config.add_argument('--puppet_certs_dir', dest='puppet_certs_dir',
+        puppet_config.add_argument('--puppet-certs-dir', dest='puppet_certs_dir',
                                     action=conf_action(self._config.plugins[self.full_name]),
                                     help='Used when generating/copying certs for use with Puppet Master')
 
-        puppet_config.add_argument('--puppet_private_keys_dir', dest='puppet_private_keys_dir',
+        puppet_config.add_argument('--puppet-private-keys-dir', dest='puppet_private_keys_dir',
                                     action=conf_action(self._config.plugins[self.full_name]),
                                     help='Used when generating/copying certs for use with Puppet Master')
 
@@ -151,8 +151,8 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
         ""
 
     def _set_up_puppet_certs(self, pem_file_name):
-        certs_dir = self._get_config_value('puppet_certs_dir', os.path.join('/var','lib','puppet','ssl','certs'))
-        private_keys_dir = self._config.    self._get_config_value('puppet_private_keys_dir',os.path.join('/var','lib','puppet','ssl','private_keys'))
+        certs_dir = self._get_config_value('puppet_certs_dir')
+        private_keys_dir = self._get_config_value('puppet_private_keys_dir')
 
         mkdir_p(self._distro._mountpoint + certs_dir)
         mkdir_p(self._distro._mountpoint + private_keys_dir)
@@ -192,8 +192,9 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
             log.debug('Trying to copy \'{0}\' to \'{1}\''.format(manifests, dest_file))
             shutil.copy2(manifests, dest_file)
 
-    def _rm_puppet_certs_dirs(self, certs_dir = '/var/lib/puppet/ssl'):
-        shutil.rmtree(certs_dir)
+    def _rm_puppet_certs_dirs(self):
+        shutil.rmtree(self._get_config_value('puppet_certs_dir'))
+        shutil.rmtree(self._get_config_value('puppet_private_keys_dir'))
 
     def _list_files(self, startpath):
         log.debug("********************************************************")
