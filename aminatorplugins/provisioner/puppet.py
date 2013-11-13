@@ -73,7 +73,7 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
                                     action=conf_action(self._config.plugins[self.full_name]),
                                     help='Used when generating/copying certs for use with Puppet Master')
 
-    def _get_config_value(self, name, default):
+    def _get_config_value(self, name, default = ''):
         config = self._config.plugins[self.full_name]
 
         if config.get(name):
