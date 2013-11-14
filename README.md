@@ -1,5 +1,42 @@
 # Puppet Provisioner for Aminator
 
+## Installation
+
+### Note, the normal plugin installation instructions for Aminator won't work until this plugin is accepted as an *official* Aminator plugin.  In the meantime, you can do this instead:
+
+```
+git clone https://github.com/robsweet/puppet-provisioner.git
+cd puppet-provisioner
+sudo python setup.py install
+```
+
+
+First, install Aminator. Then install the Puppet provisioner for Aminator:
+
+```
+sudo aminator-plugin install puppet
+```
+
+Then you will need to make add an environment that uses the Puppet provisioner to your `/etc/aminator/environments.yml` file. For example:
+
+```
+    ec2_puppet_debian:
+        cloud: ec2
+        distro: debian
+        provisioner: puppet
+        volume: linux
+        blockdevice: linux
+        finalizer: tagging_ebs
+
+    ec2_puppet_redhat:
+        cloud: ec2
+        distro: redhat
+        provisioner: puppet
+        volume: linux
+        blockdevice: linux
+        finalizer: tagging_ebs
+```
+
 ## Accepted arguments
 
 ```
@@ -17,7 +54,7 @@
 ### Basic
 
 ```
-aminate -B ami-35792c5c some-host.domain.com
+sudo aminate -B ami-35792c5c some-host.domain.com
 ```
 
 Puppet will use the default hostname 'puppet' to try to talk to the Puppet Master server and generate certs with the name in the last argument.
@@ -26,7 +63,7 @@ Puppet will use the default hostname 'puppet' to try to talk to the Puppet Maste
 ### Master specified
 
 ```
-aminate -B ami-35792c5c --puppet_master=puppet-master.domain.com some-host.domain.com
+sudo aminate -B ami-35792c5c --puppet_master=puppet-master.domain.com some-host.domain.com
 ```
 
 Puppet will use the specified hostname to try to talk to the Puppet Master server and generate certs with the name in the last argument.
@@ -38,7 +75,7 @@ Puppet will use the specified hostname to try to talk to the Puppet Master serve
 ### Masterless with one manifest
 
 ```
-aminate -B ami-35792c5c /full/path/to/some_manifest.pp
+sudo aminate -B ami-35792c5c /full/path/to/some_manifest.pp
 ```
 
 Aminator will look at the last argument and try to find that file.  If it does, Aminator will assume that you want to run Puppet in Masterless mode (apply) and will pass in the specified manifest.
@@ -47,7 +84,7 @@ Aminator will look at the last argument and try to find that file.  If it does, 
 ### Masterless with modules
 
 ```
-aminate -B ami-35792c5c /full/path/to/my_manifest_tarball.tgz
+sudo aminate -B ami-35792c5c /full/path/to/my_manifest_tarball.tgz
 ```
 
 Aminator will untar the manifests to /etc/puppet/modules (or /etc/puppet if the tarball contains a modules directory) and run Puppet apply.
@@ -56,7 +93,7 @@ Aminator will untar the manifests to /etc/puppet/modules (or /etc/puppet if the 
 ### Masterless with modules and arguments for the apply
 
 ```
-aminate -B ami-35792c5c --puppet-args="-e 'include my_module::my_class'" /full/path/to/my_manifest_tarball.tgz
+sudo aminate -B ami-35792c5c --puppet-args="-e 'include my_module::my_class'" /full/path/to/my_manifest_tarball.tgz
 ```
 
 Aminator will untar the manifests and run Puppet apply, passing the contents of puppet_args in the commandline.
