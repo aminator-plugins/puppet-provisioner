@@ -1,4 +1,5 @@
 # Puppet Provisioner for Aminator
+*Based on initial work by Archie Cowan.*
 
 ## Installation
 
