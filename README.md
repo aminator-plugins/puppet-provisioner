@@ -3,15 +3,6 @@
 
 ## Installation
 
-### Note, the normal plugin installation instructions for Aminator won't work until this plugin is accepted as an *official* Aminator plugin.  In the meantime, you can do this instead:
-
-```
-git clone https://github.com/robsweet/puppet-provisioner.git
-cd puppet-provisioner
-sudo python setup.py install
-```
-
-
 First, install Aminator. Then install the Puppet provisioner for Aminator:
 
 ```
