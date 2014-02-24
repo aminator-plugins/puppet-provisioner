@@ -23,6 +23,7 @@ aminator.plugins.provisioner.puppet
 ================================
 """
 import os
+import re
 import glob
 import shutil
 import time
@@ -60,6 +61,10 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
         puppet_config.add_argument('--puppet-args', dest='puppet_args',
                                     action=conf_action(self._config.plugins[self.full_name]),
                                     help='Extra arguments for Puppet.  Can be used to include a Puppet class with -e.')
+
+        puppet_config.add_argument('--puppet-env-vars', dest='puppet_env_vars',
+                                    action=conf_action(self._config.plugins[self.full_name]),
+                                    help='Environment arguments for Puppet, delimited by a semi-colon.  Can be used to do things like pass custom Facter facts.')
 
         puppet_config.add_argument('--puppet-master', dest='puppet_master',
                                     action=conf_action(self._config.plugins[self.full_name]),
@@ -100,12 +105,22 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
         self._decide_puppet_run_mode()
         self._pre_chroot_block()
 
+        if re.compile('\S=\S').search(self._get_config_value('puppet_env_vars')):
+            parsed_env_vars = dict([x.split('=') for x in re.compile("\s?;\s?").split(self._get_config_value('puppet_env_vars'))])
+            log.info("\tAdding to Puppet apply environment:")
+            for key, value in parsed_env_vars.iteritems():
+                log.info("\t{0}={1}".format(key,value))
+            log.info('=========================================================================================================')
+            os.environ.update( parsed_env_vars )
+
         log.debug('Entering chroot at {0}'.format(self._distro._mountpoint))
         with Chroot(self._distro._mountpoint):
 
             self._install_puppet()
 
-            escaped_args = self._escaped_puppet_args()
+            escaped_args = self._escaped('puppet_args')
+
+
 
             if self._puppet_run_mode is 'master':
                 log.info('Running puppet agent')
@@ -206,9 +221,9 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
                 log.debug((len(path) - start_len + 1) * '---' + '{0}'.format(file))
         log.debug("********************************************************")
 
-    def _escaped_puppet_args(self):
+    def _escaped(self, config_name):
         import re
-        return re.sub('\s','\ ', self._get_config_value('puppet_args', '' ))
+        return re.sub('\s','\ ', self._get_config_value(config_name, '' ))
 
     def _decide_puppet_run_mode(self):
         if os.access( self._config.context.package.arg, os.F_OK ):

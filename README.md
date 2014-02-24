@@ -32,13 +32,15 @@ Then you will need to make add an environment that uses the Puppet provisioner t
 ## Accepted arguments
 
 ```
---puppet_args - Extra arguments for Puppet.  Can be used to include a Puppet class with -e.
+--puppet-env-vars - Extra arguments for Puppet.  Can be used to include a Puppet class with -e.
 
---puppet_master - Hostname of Puppet Master
+--puppet-args - Extra arguments for Puppet.  Can be used to include a Puppet class with -e.
 
---puppet_certs_dir - Used when generating/copying certs for use with Puppet Master
+--puppet-master - Hostname of Puppet Master
 
---puppet_private_keys_dir - Used when generating/copying certs for use with Puppet Master
+--puppet-certs-dir - Used when generating/copying certs for use with Puppet Master
+
+--puppet-private-keys-dir - Used when generating/copying certs for use with Puppet Master
 ```
 
 ## Usage with a Master
@@ -55,7 +57,7 @@ Puppet will use the default hostname 'puppet' to try to talk to the Puppet Maste
 ### Master specified
 
 ```
-sudo aminate -B ami-35792c5c --puppet_master=puppet-master.domain.com some-host.domain.com
+sudo aminate -B ami-35792c5c --puppet-master=puppet-master.domain.com some-host.domain.com
 ```
 
 Puppet will use the specified hostname to try to talk to the Puppet Master server and generate certs with the name in the last argument.
@@ -80,6 +82,15 @@ sudo aminate -B ami-35792c5c /full/path/to/my_manifest_tarball.tgz
 ```
 
 Aminator will untar the manifests to /etc/puppet/modules (or /etc/puppet if the tarball contains a modules directory) and run Puppet apply.
+
+
+### Masterless passing custom facts
+
+```
+sudo aminate -B ami-35792c5c --puppet-env-vars="FACTER_my_fact=some_value; FACTER_fact2=value2" /full/path/to/my_manifest_tarball.tgz
+```
+
+Aminator will add the specified variables to the environment for Puppet runs.  The most obvious use for this is to pass custom facts to Puppet that are used in the Puppet manifests.  Pairs are delimited by semi-colon.
 
 
 ### Masterless with modules and arguments for the apply
