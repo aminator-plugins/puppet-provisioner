@@ -240,7 +240,7 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
             yum_install('puppet')
         else:
             log.info('Installing Puppet with apt.')
-            apt_get_update
+            apt_get_update()
             apt_get_install('puppet')
 
 
