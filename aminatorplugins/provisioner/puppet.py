@@ -33,11 +33,8 @@ from collections import namedtuple
 import json
 
 from aminator.plugins.provisioner.base import BaseProvisionerPlugin
-from aminator.plugins.provisioner.apt import AptProvisionerPlugin, dpkg_install, apt_get_update, apt_get_install
-from aminator.plugins.provisioner.yum import YumProvisionerPlugin, yum_localinstall, yum_install, yum_clean_metadata
-from aminator.util import download_file
-from aminator.util.linux import command, mkdir_p
-from aminator.util.linux import Chroot
+from aminator.plugins.provisioner.yum import yum_clean_metadata
+from aminator.util.linux import monitor_command, mkdir_p, Chroot
 from aminator.config import conf_action
 
 __all__ = ('PuppetProvisionerPlugin',)
@@ -118,20 +115,18 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
 
             self._install_puppet()
 
-            escaped_args = self._escaped('puppet_args')
-
-
+            puppet_args = self._get_config_value('puppet_args', '' )
 
             if self._puppet_run_mode is 'master':
                 log.info('Running puppet agent')
-                result = puppet_agent( escaped_args, context.package.arg, self._get_config_value('puppet_master', socket.gethostname()) )
+                result = puppet_agent( puppet_args, context.package.arg, self._get_config_value('puppet_master', socket.gethostname()) )
                 self._rm_puppet_certs_dirs()
             elif self._puppet_run_mode is 'apply':
                 if self._puppet_apply_file is '':
                     log.info('Running puppet apply')
                 else:
                     log.info('Running puppet apply for {0}'.format(self._puppet_apply_file))
-                result = puppet_apply( escaped_args, self._puppet_apply_file )
+                result = puppet_apply( puppet_args, self._puppet_apply_file )
 
             # * --detailed-exitcodes:
             #   Provide transaction information via exit codes. If this is enabled, an exit
@@ -221,10 +216,6 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
                 log.debug((len(path) - start_len + 1) * '---' + '{0}'.format(file))
         log.debug("********************************************************")
 
-    def _escaped(self, config_name):
-        import re
-        return re.sub('\s','\ ', self._get_config_value(config_name, '' ))
-
     def _decide_puppet_run_mode(self):
         if os.access( self._config.context.package.arg, os.F_OK ):
             log.info("{0} appears to be a file.  Running Puppet in Masterless mode with that as our Puppet manifests.".format(self._config.context.package.arg))
@@ -236,23 +227,20 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
     def _install_puppet(self):
         if self._distro._name is 'redhat':
             log.info('Installing Puppet with yum.')
-            yum_clean_metadata
-            yum_install('puppet')
+            yum_clean_metadata()
+            monitor_command('yum --nogpgcheck -y install puppet')
         else:
             log.info('Installing Puppet with apt.')
-            apt_get_update()
-            apt_get_install('puppet')
+            monitor_command('apt-get update')
+            monitor_command('apt-get -y install puppet')
 
 
-@command()
 def puppet_agent( puppet_args, certname, puppet_master):
-    return 'puppet agent --detailed-exitcodes --no-daemonize --logdest console --onetime --certname {0} --server {1} {2}'.format(certname, puppet_master, puppet_args)
+    return monitor_command("puppet agent --detailed-exitcodes --no-daemonize --logdest console --onetime --certname {0} --server {1}".format(certname, puppet_master,puppet_args))
 
-@command()
 def puppet_apply( puppet_args, puppet_apply_file ):
-    return 'puppet apply --detailed-exitcodes --logdest console --debug --verbose {0} {1}'.format(puppet_args, puppet_apply_file)
+    return monitor_command("puppet apply --detailed-exitcodes --logdest console --debug --verbose {0} {1}".format(puppet_args, puppet_apply_file))
 
-@command()
 def generate_certificate(certname):
     log.debug('Generating certificate for {0}'.format(certname))
-    return 'puppetca generate {0}'.format(certname)
+    return monitor_command(['puppetca','generate',certname])
