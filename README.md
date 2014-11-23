@@ -41,6 +41,12 @@ Then you will need to make add an environment that uses the Puppet provisioner t
 --puppet-certs-dir - Used when generating/copying certs for use with Puppet Master
 
 --puppet-private-keys-dir - Used when generating/copying certs for use with Puppet Master
+
+--puppet-hieradata - The name of the tarball containing a hiera.yaml file and hieradata directory.  This option requires Puppet >= 3.1.')
+
+--puppet-install-cmd - The command to use to install Puppet.  The native package manager will be used by default.
+
+--puppet-hiera-install-cmd - The command to use to install Hiera.  Gem will be used by default.
 ```
 
 ## Usage with a Master
@@ -100,4 +106,27 @@ sudo aminate -B ami-35792c5c --puppet-args="-e 'include my_module::my_class'" /f
 ```
 
 Aminator will untar the manifests and run Puppet apply, passing the contents of puppet_args in the commandline.
+
+
+### Masterless with Hiera data
+
+```
+sudo aminate -B ami-35792c5c --puppet-args="-e 'include my_module::my_class'" --puppet-hieradata=/full/path/to/hieradata.tgz /full/path/to/my_manifest_tarball.tgz
+```
+
+Aminator will expand the hieradata tarball into /etc/puppet.  The tarball should include a hiera.yaml and whatever files/directories hiera will use (often a hieradata directory structure with your yaml files).
+
+
+### Masterless with Hiera data and custom Puppet/Hiera install
+
+```
+sudo aminate -B ami-35792c5c \
+  --puppet-args="-e 'include my_module::my_class'" \
+  --puppet-hieradata=/full/path/to/hieradata.tgz \
+  --puppet-install-cmd="yum install -y rubygems && gem install puppet -v '>=3.1' && ln -s /usr/local/bin/puppet /usr/bin/puppet" \
+  --puppet-hiera-install-cmd="gem install hiera -v '>=1.3'" \
+  /full/path/to/my_manifest_tarball.tgz
+```
+
+Using Hiera with a 'puppet apply' was only supported starting with Puppet 3.1 so, depending on your distro/repos, you may need to use custom install commands to make sure you have a new enough Puppet and/or Hiera.
 
