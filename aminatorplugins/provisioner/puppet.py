@@ -75,6 +75,18 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
                                     action=conf_action(self._config.plugins[self.full_name]),
                                     help='Used when generating/copying certs for use with Puppet Master')
 
+        puppet_config.add_argument('--puppet-hieradata', dest='puppet_hieradata',
+                                    action=conf_action(self._config.plugins[self.full_name]),
+                                    help='The name of the tarball containing a hiera.yaml file and hieradata directory.  This option requires Puppet >= 3.1.')
+
+        puppet_config.add_argument('--puppet-install-cmd', dest='puppet_install_cmd',
+                                    action=conf_action(self._config.plugins[self.full_name]),
+                                    help='The command to use to install Puppet.  The native package manager will be used by default.')
+
+        puppet_config.add_argument('--puppet-hiera-install-cmd', dest='puppet_hiera_install_cmd',
+                                    action=conf_action(self._config.plugins[self.full_name]),
+                                    help='The command to use to install Hiera.  Gem will be used by default.')
+
     def _get_config_value(self, name, default = ''):
         config = self._config.plugins[self.full_name]
 
@@ -154,6 +166,10 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
         elif self._puppet_run_mode is 'apply':
             self._set_up_puppet_manifests(context.package.arg)
 
+            puppet_hieradata = self._get_config_value('puppet_hieradata', '' )
+            if puppet_hieradata != '':
+                self._set_up_hieradata(puppet_hieradata)
+
     def _store_package_metadata(self):
         ""
 
@@ -202,6 +218,24 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
             log.debug('Trying to copy \'{0}\' to \'{1}\''.format(manifests, dest_file))
             shutil.copy2(manifests, dest_file)
 
+    def _set_up_hieradata(self, hieradata):
+        import tarfile
+        import shutil
+
+        if tarfile.is_tarfile(hieradata):
+            tar = tarfile.open(hieradata,'r:gz')
+
+            dest_dir = os.path.join(self._distro._mountpoint,'etc','puppet')
+
+            mkdir_p(dest_dir)
+            log.debug('Untarring {0} to {1}'.format(hieradata, dest_dir))
+            tar.extractall(dest_dir)
+            tar.close
+
+            self._list_files(self._distro._mountpoint + '/etc/puppet/hieradata')
+        else:
+            log.debug('Hieradata file \'{0}\' is not a tarball.', format(hieradata))
+
     def _rm_puppet_certs_dirs(self):
         shutil.rmtree(self._get_config_value('puppet_certs_dir'))
         shutil.rmtree(self._get_config_value('puppet_private_keys_dir'))
@@ -225,14 +259,29 @@ class PuppetProvisionerPlugin(BaseProvisionerPlugin):
             self._puppet_run_mode = 'master'
 
     def _install_puppet(self):
-        if self._distro._name is 'redhat':
-            log.info('Installing Puppet with yum.')
-            yum_clean_metadata()
-            monitor_command('yum --nogpgcheck -y install puppet')
+        puppet_install_cmd = self._get_config_value('puppet_install_cmd', '')
+        if puppet_install_cmd != '':
+            log.info('Installing Puppet with command \'{0}\'.', format(puppet_install_cmd))
+            monitor_command(puppet_install_cmd)
         else:
-            log.info('Installing Puppet with apt.')
-            monitor_command('apt-get update')
-            monitor_command('apt-get -y install puppet')
+            if self._distro._name is 'redhat':
+                log.info('Installing Puppet with yum.')
+                yum_clean_metadata()
+                monitor_command('yum --nogpgcheck -y install puppet')
+            else:
+                log.info('Installing Puppet with apt.')
+                monitor_command('apt-get update')
+                monitor_command('apt-get -y install puppet')
+
+        puppet_hieradata = self._get_config_value('puppet_hieradata', '' )
+        if puppet_hieradata != '':
+            puppet_hiera_install_cmd = self._get_config_value('puppet_hiera_install_cmd', '')
+            if puppet_hiera_install_cmd != '':
+                log.info('Installing Hiera with \'{0}\'.', format(puppet_hiera_install_cmd))
+                monitor_command(puppet_hiera_install_cmd)
+            else:
+                log.info('Installing Hiera Ruby gem.')
+                monitor_command('gem install hiera')
 
 
 def puppet_agent( puppet_args, certname, puppet_master):
